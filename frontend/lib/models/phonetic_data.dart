@@ -1,0 +1,92 @@
+class PhoneticItem {
+  final String symbol;
+  final String ipa;
+  final String example;
+  final String? speakText;
+
+  const PhoneticItem({
+    required this.symbol,
+    required this.ipa,
+    required this.example,
+    this.speakText,
+  });
+}
+
+class PhoneticData {
+  static const List<PhoneticItem> letters = [
+    PhoneticItem(symbol: 'A', ipa: '/eɪ/', example: 'day', speakText: 'A'),
+    PhoneticItem(symbol: 'B', ipa: '/biː/', example: 'be', speakText: 'B'),
+    PhoneticItem(symbol: 'C', ipa: '/siː/', example: 'see', speakText: 'C'),
+    PhoneticItem(symbol: 'D', ipa: '/diː/', example: 'dee', speakText: 'D'),
+    PhoneticItem(symbol: 'E', ipa: '/iː/', example: 'see', speakText: 'E'),
+    PhoneticItem(symbol: 'F', ipa: '/ɛf/', example: 'of', speakText: 'F'),
+    PhoneticItem(symbol: 'G', ipa: '/dʒiː/', example: 'gee', speakText: 'G'),
+    PhoneticItem(symbol: 'H', ipa: '/eɪtʃ/', example: 'aitch', speakText: 'H'),
+    PhoneticItem(symbol: 'I', ipa: '/aɪ/', example: 'eye', speakText: 'I'),
+    PhoneticItem(symbol: 'J', ipa: '/dʒeɪ/', example: 'jay', speakText: 'J'),
+    PhoneticItem(symbol: 'K', ipa: '/keɪ/', example: 'kay', speakText: 'K'),
+    PhoneticItem(symbol: 'L', ipa: '/ɛl/', example: 'el', speakText: 'L'),
+    PhoneticItem(symbol: 'M', ipa: '/ɛm/', example: 'em', speakText: 'M'),
+    PhoneticItem(symbol: 'N', ipa: '/ɛn/', example: 'en', speakText: 'N'),
+    PhoneticItem(symbol: 'O', ipa: '/oʊ/', example: 'go', speakText: 'O'),
+    PhoneticItem(symbol: 'P', ipa: '/piː/', example: 'pee', speakText: 'P'),
+    PhoneticItem(symbol: 'Q', ipa: '/kjuː/', example: 'cue', speakText: 'Q'),
+    PhoneticItem(symbol: 'R', ipa: '/ɑːr/', example: 'ar', speakText: 'R'),
+    PhoneticItem(symbol: 'S', ipa: '/ɛs/', example: 'ess', speakText: 'S'),
+    PhoneticItem(symbol: 'T', ipa: '/tiː/', example: 'tee', speakText: 'T'),
+    PhoneticItem(symbol: 'U', ipa: '/juː/', example: 'you', speakText: 'U'),
+    PhoneticItem(symbol: 'V', ipa: '/viː/', example: 'vee', speakText: 'V'),
+    PhoneticItem(symbol: 'W', ipa: '/ˈdʌbəl.juː/', example: 'double u', speakText: 'W'),
+    PhoneticItem(symbol: 'X', ipa: '/ɛks/', example: 'ex', speakText: 'X'),
+    PhoneticItem(symbol: 'Y', ipa: '/waɪ/', example: 'why', speakText: 'Y'),
+    PhoneticItem(symbol: 'Z', ipa: '/ziː/', example: 'zee', speakText: 'Z'),
+  ];
+
+  static const List<PhoneticItem> phonemes = [
+    PhoneticItem(symbol: 'iː', ipa: '/iː/', example: 'see', speakText: 'see'),
+    PhoneticItem(symbol: 'ɪ', ipa: '/ɪ/', example: 'sit', speakText: 'sit'),
+    PhoneticItem(symbol: 'e', ipa: '/e/', example: 'bed', speakText: 'bed'),
+    PhoneticItem(symbol: 'æ', ipa: '/æ/', example: 'cat', speakText: 'cat'),
+    PhoneticItem(symbol: 'ɑː', ipa: '/ɑː/', example: 'father', speakText: 'father'),
+    PhoneticItem(symbol: 'ɒ', ipa: '/ɒ/', example: 'lot', speakText: 'lot'),
+    PhoneticItem(symbol: 'ɔː', ipa: '/ɔː/', example: 'thought', speakText: 'thought'),
+    PhoneticItem(symbol: 'ʊ', ipa: '/ʊ/', example: 'put', speakText: 'put'),
+    PhoneticItem(symbol: 'uː', ipa: '/uː/', example: 'boot', speakText: 'boot'),
+    PhoneticItem(symbol: 'ʌ', ipa: '/ʌ/', example: 'cup', speakText: 'cup'),
+    PhoneticItem(symbol: 'ɜː', ipa: '/ɜː/', example: 'bird', speakText: 'bird'),
+    PhoneticItem(symbol: 'ə', ipa: '/ə/', example: 'about', speakText: 'about'),
+    PhoneticItem(symbol: 'eɪ', ipa: '/eɪ/', example: 'day', speakText: 'day'),
+    PhoneticItem(symbol: 'aɪ', ipa: '/aɪ/', example: 'price', speakText: 'price'),
+    PhoneticItem(symbol: 'ɔɪ', ipa: '/ɔɪ/', example: 'boy', speakText: 'boy'),
+    PhoneticItem(symbol: 'aʊ', ipa: '/aʊ/', example: 'now', speakText: 'now'),
+    PhoneticItem(symbol: 'əʊ', ipa: '/əʊ/', example: 'go', speakText: 'go'),
+    PhoneticItem(symbol: 'oʊ', ipa: '/oʊ/', example: 'go', speakText: 'go'),
+    PhoneticItem(symbol: 'ɪə', ipa: '/ɪə/', example: 'near', speakText: 'near'),
+    PhoneticItem(symbol: 'eə', ipa: '/eə/', example: 'square', speakText: 'square'),
+    PhoneticItem(symbol: 'ʊə', ipa: '/ʊə/', example: 'cure', speakText: 'cure'),
+    PhoneticItem(symbol: 'p', ipa: '/p/', example: 'pin', speakText: 'pin'),
+    PhoneticItem(symbol: 'b', ipa: '/b/', example: 'bin', speakText: 'bin'),
+    PhoneticItem(symbol: 't', ipa: '/t/', example: 'tie', speakText: 'tie'),
+    PhoneticItem(symbol: 'd', ipa: '/d/', example: 'die', speakText: 'die'),
+    PhoneticItem(symbol: 'k', ipa: '/k/', example: 'cat', speakText: 'cat'),
+    PhoneticItem(symbol: 'g', ipa: '/g/', example: 'got', speakText: 'got'),
+    PhoneticItem(symbol: 'tʃ', ipa: '/tʃ/', example: 'cheese', speakText: 'cheese'),
+    PhoneticItem(symbol: 'dʒ', ipa: '/dʒ/', example: 'judge', speakText: 'judge'),
+    PhoneticItem(symbol: 'f', ipa: '/f/', example: 'four', speakText: 'four'),
+    PhoneticItem(symbol: 'v', ipa: '/v/', example: 'very', speakText: 'very'),
+    PhoneticItem(symbol: 'θ', ipa: '/θ/', example: 'thing', speakText: 'thing'),
+    PhoneticItem(symbol: 'ð', ipa: '/ð/', example: 'this', speakText: 'this'),
+    PhoneticItem(symbol: 's', ipa: '/s/', example: 'see', speakText: 'see'),
+    PhoneticItem(symbol: 'z', ipa: '/z/', example: 'zoo', speakText: 'zoo'),
+    PhoneticItem(symbol: 'ʃ', ipa: '/ʃ/', example: 'she', speakText: 'she'),
+    PhoneticItem(symbol: 'ʒ', ipa: '/ʒ/', example: 'measure', speakText: 'measure'),
+    PhoneticItem(symbol: 'h', ipa: '/h/', example: 'hat', speakText: 'hat'),
+    PhoneticItem(symbol: 'm', ipa: '/m/', example: 'man', speakText: 'man'),
+    PhoneticItem(symbol: 'n', ipa: '/n/', example: 'no', speakText: 'no'),
+    PhoneticItem(symbol: 'ŋ', ipa: '/ŋ/', example: 'sing', speakText: 'sing'),
+    PhoneticItem(symbol: 'l', ipa: '/l/', example: 'leg', speakText: 'leg'),
+    PhoneticItem(symbol: 'r', ipa: '/r/', example: 'red', speakText: 'red'),
+    PhoneticItem(symbol: 'j', ipa: '/j/', example: 'yes', speakText: 'yes'),
+    PhoneticItem(symbol: 'w', ipa: '/w/', example: 'we', speakText: 'we'),
+  ];
+}

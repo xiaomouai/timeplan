@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Feishu Document Downloader",
+  "version": "1.0",
+  "description": "Capture Feishu web documents and convert them to PDF.",
+  "permissions": [
+    "webRequest",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.feishu.cn/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.feishu.cn/*"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "js": [
+        "jspdf.umd.min.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Feishu Doc Downloader"
+  }
+}

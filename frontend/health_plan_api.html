@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>健康底座 · 动态后端版</title>
+<style>
+  :root{
+    --indigo:#5E5CE6; --green:#30B06A; --bg:#f2f3f7; --card:#fff;
+    --muted:#8a8f9a; --line:#e6e8ee; --red:#e5484d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",Segoe UI,Roboto,sans-serif;
+    background:var(--bg);color:#1d1d1f;line-height:1.5}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 14px 40px}
+  header{display:flex;align-items:center;gap:10px;margin:8px 2px 14px}
+  header h1{font-size:20px;margin:0;font-weight:700}
+  .badge{font-size:12px;color:#fff;background:var(--indigo);padding:2px 8px;border-radius:999px}
+  .err{background:#fff3f3;border:1px solid #ffd5d5;color:var(--red);padding:10px 12px;border-radius:12px;font-size:13px;margin-bottom:12px}
+  .phase{background:linear-gradient(135deg,#EAF6EE,#EEF0FF);border-radius:16px;padding:14px;margin-bottom:12px}
+  .phase .t{font-weight:700;font-size:15px}
+  .phase .f{font-size:13px;color:#555;margin-top:4px}
+  .row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-top:8px}
+  .progress{height:6px;background:#e3e5ec;border-radius:99px;overflow:hidden;margin-top:6px}
+  .progress>i{display:block;height:100%;background:var(--green)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+  .card h3{margin:0 0 4px;font-size:14px}
+  .src{font-size:11px;color:var(--muted);margin-top:2px}
+  .grade{font-size:11px;padding:1px 7px;border-radius:99px;margin-left:6px}
+  .gA{background:#e8f0ff;color:#3a6df0}.gB{background:#fff3e0;color:#c47d12}
+  .gC{background:#edeaff;color:#6b4fe0}.gR{background:#eee;color:#666}
+  .habit{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+  .habit:first-child{border-top:none}
+  .habit .info{flex:1}
+  .habit .nm{font-size:14px;font-weight:600}
+  .habit .meta{font-size:11px;color:var(--muted)}
+  .switch{width:46px;height:28px;border-radius:99px;background:#d7dae3;position:relative;cursor:pointer;flex:none;transition:.2s}
+  .switch.on{background:var(--green)}
+  .switch>i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+  .switch.on>i{left:21px}
+  .btn{display:inline-block;border:none;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn.indigo{background:var(--indigo);color:#fff}
+  .btn.green{background:var(--green);color:#fff}
+  .btn.ghost{background:#eef0f6;color:#333}
+  .btn:disabled{opacity:.5;cursor:default}
+  .ai{background:#0f1020;color:#e8e8f0;border-radius:16px;padding:14px;margin:14px 0}
+  .ai h3{margin:0 0 8px;color:#9ad;font-size:14px}
+  .ai .focus{font-weight:700;margin-bottom:8px}
+  .ai ul{margin:6px 0;padding-left:18px;font-size:13px}
+  .ai .note{font-size:12px;color:#9aa;margin-top:8px}
+  .chat{display:none;margin-top:10px}
+  .chat textarea{width:100%;height:60px;border-radius:10px;border:1px solid #333a55;background:#1a1c33;color:#eee;padding:8px;font-size:13px;resize:none}
+  .bubble{font-size:13px;padding:8px 10px;border-radius:10px;margin:6px 0}
+  .bubble.u{background:#2a2d4a;text-align:right}
+  .bubble.a{background:#161a2e}
+  .muted{color:var(--muted);font-size:12px;text-align:center;margin-top:18px}
+  .loading{padding:40px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>健康底座</h1>
+    <span class="badge">动态后端 · 无模拟数据</span>
+  </header>
+  <div id="err"></div>
+  <div id="app" class="loading">正在连接健康后端…</div>
+</div>
+
+<script>
+const API = 'http://127.0.0.1:5055/api/v1';
+let TOKEN = null;
+
+function el(html){const d=document.createElement('div');d.innerHTML=html.trim();return d.firstChild;}
+function showErr(m){document.getElementById('err').innerHTML='<div class="err">'+m+'</div>';}
+function clearErr(){document.getElementById('err').innerHTML='';}
+async function api(path, opts={}){
+  opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+  if(TOKEN) opts.headers['Authorization'] = 'Bearer '+TOKEN;
+  const r = await fetch(API+path, opts);
+  const j = await r.json().catch(()=>({success:false,message:'响应解析失败'}));
+  if(!r.ok || j.success!==true) throw new Error(j.message||('HTTP '+r.status));
+  return j.data;
+}
+async function bootstrap(){
+  let cid = localStorage.getItem('hp_client_id');
+  if(!cid){cid = (crypto.randomUUID?crypto.randomUUID():'c-'+Date.now());localStorage.setItem('hp_client_id',cid);}
+  const d = await api('/health/bootstrap',{method:'POST',body:JSON.stringify({client_id:cid,nickname:'timePlan 用户'})});
+  TOKEN = d.token;
+}
+
+let HABITS = [];
+async function load(){
+  clearErr();
+  try{
+    if(!TOKEN) await bootstrap();
+    const [dash, hab] = await Promise.all([api('/health/dashboard'), api('/health/habits')]);
+    HABITS = hab.habits||[];
+    render(dash);
+  }catch(e){
+    document.getElementById('app').className='';
+    document.getElementById('app').innerHTML='<div class="loading">无法连接健康后端。</div>';
+    showErr('连接失败：'+e.message+'（请确认后端已在 127.0.0.1:5055 运行）');
+  }
+}
+function gradeClass(g){return g==='A'?'gA':g==='B'?'gB':g==='C'?'gC':'gR';}
+function gradeText(g){return g==='A'?'A级·明确阈值':g==='B'?'B级·需测量':g==='C'?'C级·推荐':'执行项';}
+
+function render(d){
+  const items = d.items||[];
+  const phase = d.phase||0;
+  const itemsHtml = items.map(it=>{
+    const on = it.done_today?' on':'';
+    return `<div class="habit">
+      <div class="info">
+        <div class="nm">${it.title}<span class="grade ${gradeClass(it.grade)}">${gradeText(it.grade)}</span></div>
+        <div class="meta">${it.frequency==='daily'?'每天':it.frequency==='weekly'?'每周':it.frequency==='quarterly'?'每季':'每月'} · 目标 ${it.target_value??'—'} ${it.unit||''}</div>
+        <div class="src">证据：${(it.source||'').slice(0,48)}</div>
+      </div>
+      <div class="switch${on}" data-key="${it.key}"><i></i></div>
+    </div>`;
+  }).join('');
+
+  const html = `
+    <div class="phase">
+      <div class="t">阶段 ${phase} · 连续 ${d.streak||0} 天</div>
+      <div class="f">${items.filter(i=>i.done_today).length}/${items.length} 项今日已记录</div>
+      <div class="progress"><i style="width:${Math.round(items.filter(i=>i.done_today).length/items.length*100)}%"></i></div>
+    </div>
+    <div class="card">
+      <h3>今日打卡（数据来自后端，实时持久化）</h3>
+      ${itemsHtml}
+    </div>
+    <div class="ai">
+      <h3>AI 今日计划（真实大模型生成）</h3>
+      <div id="planBox" class="muted">点击下方按钮，由后端调用 DeepSeek 基于你的真实数据生成。</div>
+      <button class="btn green" id="genBtn" style="margin-top:10px">⚡ 生成今日计划</button>
+    </div>
+    <div class="card">
+      <h3>AI 健康教练</h3>
+      <button class="btn ghost" id="coachToggle">打开对话</button>
+      <div class="chat" id="chat">
+        <div id="bubbles"></div>
+        <textarea id="q" placeholder="例如：今天太累，运动怎么安排？"></textarea>
+        <button class="btn indigo" id="sendBtn" style="margin-top:8px">发送</button>
+      </div>
+    </div>
+    <div class="muted">数据真源：xuebaApi 后端（SQLite/MySQL）· 习惯定义与打卡均动态下发，无本地模拟。</div>
+  `;
+  const app = document.getElementById('app');
+  app.className='';app.innerHTML=html;
+
+  app.querySelectorAll('.switch').forEach(s=>{
+    s.onclick = async ()=>{
+      const key = s.dataset.key;
+      const willOn = !s.classList.contains('on');
+      s.classList.toggle('on', willOn);
+      try{
+        await api('/health/checkin',{method:'POST',body:JSON.stringify({
+          date:d.date, entries:[{habit_key:key, value: willOn?1:0, done:willOn}]
+        })});
+        await refresh();
+      }catch(e){ showErr('打卡失败：'+e.message); }
+    };
+  });
+  document.getElementById('genBtn').onclick = generatePlan;
+  document.getElementById('coachToggle').onclick = ()=>{
+    const c=document.getElementById('chat');c.style.display = c.style.display==='block'?'none':'block';
+  };
+  document.getElementById('sendBtn').onclick = coach;
+}
+
+async function refresh(){
+  const dash = await api('/health/dashboard');
+  render(dash);
+}
+async function generatePlan(){
+  const btn=document.getElementById('genBtn');btn.disabled=true;btn.textContent='生成中…';
+  try{
+    const p = await api('/health/plan/generate',{method:'POST',body:JSON.stringify({period:'daily'})});
+    let parsed=null;try{parsed=JSON.parse(p.content);}catch(_){}
+    const box=document.getElementById('planBox');
+    if(parsed){
+      box.innerHTML = `<div class="focus">${parsed.focus||''}</div>`+
+        (parsed.actions?('<ul>'+parsed.actions.map(a=>`<li><b>${a.title}</b>：${a.target_today||''}<br><span style="color:#9aa;font-size:12px">${a.why||''}</span></li>`).join('')+'</ul>'):'')+
+        (parsed.coach_note?`<div class="note">${parsed.coach_note}</div>`:'');
+    }else{
+      box.textContent = p.content||'(空)';
+    }
+  }catch(e){ showErr('AI 生成失败：'+e.message); }
+  finally{ btn.disabled=false;btn.textContent='⚡ 重新生成'; }
+}
+async function coach(){
+  const q=document.getElementById('q').value.trim();
+  if(!q) return;
+  const bubbles=document.getElementById('bubbles');
+  bubbles.innerHTML += `<div class="bubble u">${q.replace(/</g,'&lt;')}</div>`;
+  document.getElementById('q').value='';
+  try{
+    const r = await api('/health/coach',{method:'POST',body:JSON.stringify({message:q})});
+    bubbles.innerHTML += `<div class="bubble a">${(r.content||'').replace(/</g,'&lt;')}</div>`;
+  }catch(e){ bubbles.innerHTML += `<div class="bubble a" style="color:#e88">教练出错：${e.message}</div>`; }
+}
+load();
+</script>
+</body>
+</html>

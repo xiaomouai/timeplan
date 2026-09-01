@@ -1,0 +1,195 @@
+version: '3.8'
+
+# 生产环境配置 - 使用方式: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  # MySQL 数据库服务 - 生产优化配置
+  mysql:
+    image: mysql:8.0
+    container_name: xuebadict-mysql-prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-change_this_password}
+      MYSQL_DATABASE: ${DB_NAME:-xuebadict}
+      MYSQL_USER: ${DB_USER:-xuebadict}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change_this_password}
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${DB_PORT:-3306}:3306"  # 仅本机访问
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./xuebadict.sql:/docker-entrypoint-initdb.d/xuebadict.sql
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max_connections=500
+      --max_allowed_packet=256M
+      --innodb_buffer_pool_size=1G
+      --innodb_log_file_size=512M
+    restart: always
+    networks:
+      - xuebadict-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # Redis 缓存服务 - 生产优化配置
+  redis:
+    image: redis:7-alpine
+    container_name: xuebadict-redis-prod
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-change_this_password} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"  # 仅本机访问
+    volumes:
+      - redis_data:/data
+    restart: always
+    networks:
+      - xuebadict-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # 狮子英语 API 服务 - 生产环境
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: xuebadict-api-prod
+    environment:
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:-change_this_secret_key_in_production}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change_this_jwt_secret_key}
+      
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-xuebadict}
+      DB_PASSWORD: ${DB_PASSWORD:-change_this_password}
+      DB_NAME: ${DB_NAME:-xuebadict}
+      SQLALCHEMY_DATABASE_URI: mysql+pymysql://${DB_USER:-xuebadict}:${DB_PASSWORD:-change_this_password}@mysql:3306/${DB_NAME:-xuebadict}?charset=utf8mb4
+      
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_this_password}
+      REDIS_DB: 0
+      
+      LOG_LEVEL: INFO
+      LOG_FILE: /app/logs/app.log
+      
+      # 第三方服务配置
+      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID}
+      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET}
+      WECHAT_APP_ID: ${WECHAT_APP_ID}
+      ALIPAY_APP_ID: ${ALIPAY_APP_ID}
+      QWEN_API_KEY: ${QWEN_API_KEY}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./dict:/app/dict:ro
+      - ./instance:/app/instance
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    networks:
+      - xuebadict-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      replicas: 1  # 可调整副本数量用于负载均衡
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+  # Celery Worker 服务 - 生产环境
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: xuebadict-celery-worker-prod
+    command: celery -A services.tasks worker -l info --concurrency=4 --max-tasks-per-child=1000
+    environment:
+      FLASK_ENV: production
+      SQLALCHEMY_DATABASE_URI: mysql+pymysql://${DB_USER:-xuebadict}:${DB_PASSWORD:-change_this_password}@mysql:3306/${DB_NAME:-xuebadict}?charset=utf8mb4
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change_this_password}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      - mysql
+      - redis
+    restart: always
+    networks:
+      - xuebadict-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+
+  # Flower 监控面板 - 仅内部访问
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: xuebadict-flower-prod
+    command: celery -A services.tasks flower --port=5555 --broker=redis://:${REDIS_PASSWORD:-change_this_password}@redis:6379/0
+    environment:
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-change_this_password}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-change_this_password}@redis:6379/0
+    ports:
+      - "127.0.0.1:5555:5555"  # 仅本机访问
+    depends_on:
+      - redis
+      - celery_worker
+    restart: always
+    networks:
+      - xuebadict-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  xuebadict-network:
+    driver: bridge

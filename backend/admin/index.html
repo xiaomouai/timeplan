@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猫头鹰词典 - 后端运营管理平台</title>
+    <!-- 引入 Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- 引入 ECharts -->
+    <script src="https://unpkg.com/echarts/dist/echarts.min.js"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f5f7fa; }
+        #app { height: 100vh; }
+        .login-container { height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%); }
+        .login-card { width: 400px; padding: 20px; }
+        .admin-container { height: 100vh; }
+        .admin-header { background-color: #fff; border-bottom: 1px solid #dcdfe6; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; height: 60px; }
+        .admin-aside { background-color: #304156; color: #fff; }
+        .admin-main { padding: 20px; overflow-y: auto; }
+        .stats-card { margin-bottom: 20px; }
+        .stats-num { font-size: 24px; font-weight: bold; color: #409EFF; }
+        .stats-label { color: #909399; font-size: 14px; margin-top: 5px; }
+        .chart-container { height: 300px; margin-top: 20px; background: #fff; padding: 20px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 登录页 -->
+        <div v-if="!isLoggedIn" class="login-container">
+            <el-card class="login-card">
+                <template #header>
+                    <div style="text-align: center; font-size: 20px; font-weight: bold;">猫头鹰词典管理后台</div>
+                </template>
+                <el-form :model="loginForm" label-position="top">
+                    <el-form-item label="手机号">
+                        <el-input v-model="loginForm.phone" placeholder="请输入管理员手机号"></el-input>
+                    </el-form-item>
+                    <el-form-item label="密码">
+                        <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" @keyup.enter="handleLogin"></el-input>
+                    </el-form-item>
+                    <el-button type="primary" style="width: 100%" @click="handleLogin" :loading="loading">登录</el-button>
+                </el-form>
+            </el-card>
+        </div>
+
+        <!-- 管理后台 -->
+        <el-container v-else class="admin-container">
+            <el-aside width="200px" class="admin-aside">
+                <div style="padding: 20px; text-align: center; font-weight: bold; font-size: 18px;">运营平台</div>
+                <el-menu
+                    active-text-color="#ffd04b"
+                    background-color="#304156"
+                    text-color="#fff"
+                    :default-active="activeMenu"
+                    @select="handleMenuSelect"
+                >
+                    <el-menu-item index="dashboard">
+                        <el-icon><document /></el-icon>
+                        <span>控制台</span>
+                    </el-menu-item>
+                    <el-menu-item index="users">
+                        <el-icon><user /></el-icon>
+                        <span>用户管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="orders">
+                        <el-icon><shopping-cart /></el-icon>
+                        <span>订单管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="activation">
+                        <el-icon><key /></el-icon>
+                        <span>激活码管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="versions">
+                        <el-icon><refresh /></el-icon>
+                        <span>版本管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="reports">
+                        <el-icon><pie-chart /></el-icon>
+                        <span>统计报表</span>
+                    </el-menu-item>
+                </el-menu>
+            </el-aside>
+            
+            <el-container>
+                <el-header class="admin-header">
+                    <div style="font-weight: bold; color: #606266;">{{ menuTitle }}</div>
+                    <el-dropdown @command="handleUserCommand">
+                        <span class="el-dropdown-link">
+                            {{ userInfo.nickname || '管理员' }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
+                        </span>
+                        <template #dropdown>
+                            <el-dropdown-menu>
+                                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </template>
+                    </el-dropdown>
+                </el-header>
+                
+                <el-main class="admin-main">
+                    <!-- 控制台 -->
+                    <div v-if="activeMenu === 'dashboard'">
+                        <el-row :gutter="20">
+                            <el-col :span="6">
+                                <el-card class="stats-card">
+                                    <div class="stats-num">{{ stats.total_users || 0 }}</div>
+                                    <div class="stats-label">总用户数</div>
+                                </el-card>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-card class="stats-card">
+                                    <div class="stats-num">{{ stats.today_users || 0 }}</div>
+                                    <div class="stats-label">今日新增</div>
+                                </el-card>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-card class="stats-card">
+                                    <div class="stats-num">{{ stats.total_orders || 0 }}</div>
+                                    <div class="stats-label">累计订单</div>
+                                </el-card>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-card class="stats-card">
+                                    <div class="stats-num">¥ {{ stats.total_revenue || 0 }}</div>
+                                    <div class="stats-label">累计营收</div>
+                                </el-card>
+                            </el-col>
+                        </el-row>
+                        <div id="growthChart" class="chart-container"></div>
+                    </div>
+
+                    <!-- 用户管理 -->
+                    <div v-if="activeMenu === 'users'">
+                        <el-card>
+                            <template #header>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <el-input v-model="searchQuery" placeholder="搜索手机号/昵称" style="width: 300px;" clearable @clear="fetchUsers">
+                                        <template #append>
+                                            <el-button @click="fetchUsers"><el-icon><search /></el-icon></el-button>
+                                        </template>
+                                    </el-input>
+                                </div>
+                            </template>
+                            <el-table :data="users" style="width: 100%" v-loading="loading">
+                                <el-table-column prop="id" label="ID" width="180"></el-table-column>
+                                <el-table-column prop="phone" label="手机号" width="120"></el-table-column>
+                                <el-table-column prop="nickname" label="昵称"></el-table-column>
+                                <el-table-column prop="role" label="角色" width="100">
+                                    <template #default="scope">
+                                        <el-tag :type="scope.row.role === 'admin' ? 'danger' : 'success'">{{ scope.row.role }}</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="status" label="状态" width="100">
+                                    <template #default="scope">
+                                        <el-tag :type="scope.row.status === 'active' ? 'success' : 'info'">{{ scope.row.status }}</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="操作" width="150">
+                                    <template #default="scope">
+                                        <el-button 
+                                            :type="scope.row.status === 'active' ? 'danger' : 'success'" 
+                                            size="small"
+                                            @click="toggleUserStatus(scope.row)"
+                                        >
+                                            {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                                        </el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                            <el-pagination
+                                style="margin-top: 20px; justify-content: flex-end;"
+                                background
+                                layout="prev, pager, next"
+                                :total="userTotal"
+                                :page-size="10"
+                                @current-change="handleUserPageChange"
+                            ></el-pagination>
+                        </el-card>
+                    </div>
+
+                    <!-- 订单管理 -->
+                    <div v-if="activeMenu === 'orders'">
+                        <el-card>
+                            <el-table :data="orders" style="width: 100%" v-loading="loading">
+                                <el-table-column prop="order_no" label="订单号" width="220"></el-table-column>
+                                <el-table-column prop="user_phone" label="用户手机" width="120"></el-table-column>
+                                <el-table-column prop="actual_price" label="金额" width="100">
+                                    <template #default="scope">¥ {{ scope.row.actual_price }}</template>
+                                </el-table-column>
+                                <el-table-column prop="payment_method" label="支付方式" width="100"></el-table-column>
+                                <el-table-column prop="status" label="状态" width="100">
+                                    <template #default="scope">
+                                        <el-tag :type="scope.row.status === 'paid' ? 'success' : 'warning'">{{ scope.row.status }}</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="created_at" label="创建时间" width="180"></el-table-column>
+                                <el-table-column label="操作" width="120">
+                                    <template #default="scope">
+                                        <el-dropdown trigger="click" @command="(cmd) => handleOrderAction(scope.row, cmd)">
+                                            <el-button type="primary" size="small">
+                                                处理<el-icon class="el-icon--right"><arrow-down /></el-icon>
+                                            </el-button>
+                                            <template #dropdown>
+                                                <el-dropdown-menu>
+                                                    <el-dropdown-item command="paid">设为已支付</el-dropdown-item>
+                                                    <el-dropdown-item command="cancelled">取消订单</el-dropdown-item>
+                                                    <el-dropdown-item command="refunded">退款</el-dropdown-item>
+                                                </el-dropdown-menu>
+                                            </template>
+                                        </el-dropdown>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                            <el-pagination
+                                style="margin-top: 20px; justify-content: flex-end;"
+                                background
+                                layout="prev, pager, next"
+                                :total="orderTotal"
+                                :page-size="10"
+                                @current-change="handleOrderPageChange"
+                            ></el-pagination>
+                        </el-card>
+                    </div>
+
+                    <!-- 激活码管理 -->
+                    <div v-if="activeMenu === 'activation'">
+                        <el-card>
+                            <template #header>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="display: flex; gap: 10px;">
+                                        <el-input v-model="activationSearch" placeholder="搜索激活码/用户ID" style="width: 250px;" clearable @clear="fetchActivationCodes">
+                                            <template #append>
+                                                <el-button @click="fetchActivationCodes"><el-icon><search /></el-icon></el-button>
+                                            </template>
+                                        </el-input>
+                                        <el-button type="primary" @click="showActivationGen = true">批量生成激活码</el-button>
+                                    </div>
+                                </div>
+                            </template>
+                            <el-table :data="activationCodes" style="width: 100%" v-loading="loading">
+                                <el-table-column prop="code" label="激活码" width="220">
+                                    <template #default="scope">
+                                        <code style="background: #f4f4f5; padding: 2px 5px; border-radius: 3px;">{{ scope.row.code }}</code>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="plan_type" label="套餐类型" width="100">
+                                    <template #default="scope">
+                                        <el-tag size="small">{{ scope.row.plan_type }}</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="duration_days" label="时长(天)" width="90"></el-table-column>
+                                <el-table-column prop="status" label="状态" width="100">
+                                    <template #default="scope">
+                                        <el-tag v-if="scope.row.status === 0" type="success">未使用</el-tag>
+                                        <el-tag v-else-if="scope.row.status === 1" type="info">已使用</el-tag>
+                                        <el-tag v-else-if="scope.row.status === 2" type="warning">已过期</el-tag>
+                                        <el-tag v-else type="danger">已作废</el-tag>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="activated_by_phone" label="使用者手机" width="120"></el-table-column>
+                                <el-table-column prop="activated_at" label="使用时间" width="160"></el-table-column>
+                                <el-table-column prop="created_at" label="创建时间" width="160"></el-table-column>
+                                <el-table-column label="操作" width="120">
+                                    <template #default="scope">
+                                        <el-button 
+                                            v-if="scope.row.status === 0" 
+                                            type="danger" 
+                                            size="small"
+                                            @click="updateActivationStatus(scope.row.id, 3)"
+                                        >作废</el-button>
+                                        <el-button 
+                                            v-if="scope.row.status === 3" 
+                                            type="success" 
+                                            size="small"
+                                            @click="updateActivationStatus(scope.row.id, 0)"
+                                        >恢复</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                            <el-pagination
+                                style="margin-top: 20px; justify-content: flex-end;"
+                                background
+                                layout="prev, pager, next"
+                                :total="activationTotal"
+                                :page-size="10"
+                                @current-change="handleActivationPageChange"
+                            ></el-pagination>
+                        </el-card>
+
+                        <!-- 生成激活码对话框 -->
+                        <el-dialog v-model="showActivationGen" title="批量生成激活码" width="400px">
+                            <el-form :model="activationForm" label-width="100px">
+                                <el-form-item label="套餐类型">
+                                    <el-select v-model="activationForm.plan_type" style="width: 100%">
+                                        <el-option label="体验版 (trial)" value="trial"></el-option>
+                                        <el-option label="月卡 (month)" value="month"></el-option>
+                                        <el-option label="季卡 (season)" value="season"></el-option>
+                                        <el-option label="年卡 (year)" value="year"></el-option>
+                                        <el-option label="终身卡 (lifetime)" value="lifetime"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="时长(天)">
+                                    <el-input-number v-model="activationForm.duration_days" :min="1"></el-input-number>
+                                </el-form-item>
+                                <el-form-item label="生成数量">
+                                    <el-input-number v-model="activationForm.quantity" :min="1" :max="100"></el-input-number>
+                                </el-form-item>
+                            </el-form>
+                            <template #footer>
+                                <el-button @click="showActivationGen = false">取消</el-button>
+                                <el-button type="primary" @click="handleGenerateCodes" :loading="loading">确认生成</el-button>
+                            </template>
+                        </el-dialog>
+                    </div>
+
+                    <!-- 版本管理 -->
+                    <div v-if="activeMenu === 'versions'">
+                        <div style="margin-bottom: 20px;">
+                            <el-button type="primary" @click="showVersionEdit = true">发布新版本</el-button>
+                        </div>
+                        <el-row :gutter="20">
+                            <el-col :span="12">
+                                <el-card>
+                                    <template #header>最新应用版本</template>
+                                    <div v-if="versions.app_versions">
+                                        <p><b>版本号:</b> {{ versions.app_versions.latest.version }}</p>
+                                        <p><b>Build:</b> {{ versions.app_versions.latest.build_number }}</p>
+                                        <p><b>发布日期:</b> {{ versions.app_versions.latest.release_date }}</p>
+                                        <p><b>下载地址:</b> {{ versions.app_versions.latest.download_url }}</p>
+                                        <p><b>强制更新:</b> {{ versions.app_versions.latest.force_update ? '是' : '否' }}</p>
+                                        <p><b>更新日志:</b></p>
+                                        <ul>
+                                            <li v-for="item in versions.app_versions.latest.changelog" :key="item">{{ item }}</li>
+                                        </ul>
+                                    </div>
+                                </el-card>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-card>
+                                    <template #header>API版本</template>
+                                    <div v-if="versions.api_version">
+                                        <p><b>版本:</b> {{ versions.api_version.version }}</p>
+                                        <p><b>Build:</b> {{ versions.api_version.build }}</p>
+                                        <p><b>最小支持App版本:</b> {{ versions.api_version.min_app_version }}</p>
+                                    </div>
+                                </el-card>
+                            </el-col>
+                        </el-row>
+
+                        <!-- 编辑版本对话框 -->
+                        <el-dialog v-model="showVersionEdit" title="发布新版本" width="500px">
+                            <el-form :model="versionForm" label-width="100px">
+                                <el-form-item label="版本号">
+                                    <el-input v-model="versionForm.version" placeholder="如 1.3.0"></el-input>
+                                </el-form-item>
+                                <el-form-item label="Build">
+                                    <el-input-number v-model="versionForm.build_number"></el-input-number>
+                                </el-form-item>
+                                <el-form-item label="下载链接">
+                                    <el-input v-model="versionForm.download_url"></el-input>
+                                </el-form-item>
+                                <el-form-item label="强制更新">
+                                    <el-switch v-model="versionForm.force_update"></el-switch>
+                                </el-form-item>
+                                <el-form-item label="更新内容">
+                                    <el-input type="textarea" v-model="versionForm.changelog_str" placeholder="多条内容换行输入"></el-input>
+                                </el-form-item>
+                            </el-form>
+                            <template #footer>
+                                <el-button @click="showVersionEdit = false">取消</el-button>
+                                <el-button type="primary" @click="handleUpdateVersion" :loading="loading">发布</el-button>
+                            </template>
+                        </el-dialog>
+                    </div>
+
+                    <!-- 统计报表 -->
+                    <div v-if="activeMenu === 'reports'">
+                        <el-row :gutter="20">
+                            <el-col :span="12">
+                                <div id="userGrowthReport" class="chart-container"></div>
+                            </el-col>
+                            <el-col :span="12">
+                                <div id="revenueReport" class="chart-container"></div>
+                            </el-col>
+                        </el-row>
+                    </div>
+                </el-main>
+            </el-container>
+        </el-container>
+    </div>
+
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus JS -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus Icons -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    
+    <script>
+        const { createApp, ref, reactive, onMounted, nextTick } = Vue;
+
+        const app = createApp({
+            setup() {
+                const isLoggedIn = ref(!!localStorage.getItem('admin_token'));
+                const loading = ref(false);
+                const activeMenu = ref('dashboard');
+                const menuTitle = ref('控制台');
+                const loginForm = reactive({ phone: '', password: '' });
+                const userInfo = ref(JSON.parse(localStorage.getItem('admin_user') || '{}'));
+                
+                const stats = ref({});
+                const users = ref([]);
+                const userTotal = ref(0);
+                const userPage = ref(1);
+                const searchQuery = ref('');
+                
+                const orders = ref([]);
+                const orderTotal = ref(0);
+                const orderPage = ref(1);
+                
+                const activationCodes = ref([]);
+                const activationTotal = ref(0);
+                const activationPage = ref(1);
+                const activationSearch = ref('');
+                const showActivationGen = ref(false);
+                const activationForm = reactive({
+                    plan_type: 'month',
+                    duration_days: 30,
+                    quantity: 1
+                });
+                
+                const versions = ref({});
+                const showVersionEdit = ref(false);
+                const versionForm = reactive({
+                    version: '',
+                    build_number: 0,
+                    download_url: '',
+                    force_update: false,
+                    changelog_str: ''
+                });
+                
+                const API_BASE = '/api/v1/admin';
+
+                const fetchWithAuth = async (url, options = {}) => {
+                    const token = localStorage.getItem('admin_token');
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    };
+                    if (token) headers['Authorization'] = `Bearer ${token}`;
+                    
+                    const response = await fetch(url, { ...options, headers });
+                    if (response.status === 401 || response.status === 403) {
+                        handleLogout();
+                        throw new Error('Unauthorized');
+                    }
+                    return response.json();
+                };
+
+                const handleLogin = async () => {
+                    if (!loginForm.phone || !loginForm.password) {
+                        ElementPlus.ElMessage.warning('请输入手机号和密码');
+                        return;
+                    }
+                    loading.value = true;
+                    try {
+                        const res = await fetch('/api/v1/admin/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(loginForm)
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            localStorage.setItem('admin_token', data.data.token);
+                            localStorage.setItem('admin_user', JSON.stringify(data.data.user_info));
+                            userInfo.value = data.data.user_info;
+                            isLoggedIn.value = true;
+                            ElementPlus.ElMessage.success('登录成功');
+                            fetchDashboard();
+                        } else {
+                            ElementPlus.ElMessage.error(data.message || '登录失败');
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('网络错误');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const handleLogout = () => {
+                    localStorage.removeItem('admin_token');
+                    localStorage.removeItem('admin_user');
+                    isLoggedIn.value = false;
+                };
+
+                const handleUserCommand = (command) => {
+                    if (command === 'logout') handleLogout();
+                };
+
+                const handleMenuSelect = (index) => {
+                    activeMenu.value = index;
+                    const titles = {
+                        dashboard: '控制台',
+                        users: '用户管理',
+                        orders: '订单管理',
+                        activation: '激活码管理',
+                        versions: '版本管理',
+                        reports: '统计报表'
+                    };
+                    menuTitle.value = titles[index];
+                    
+                    if (index === 'dashboard') fetchDashboard();
+                    else if (index === 'users') fetchUsers();
+                    else if (index === 'orders') fetchOrders();
+                    else if (index === 'activation') fetchActivationCodes();
+                    else if (index === 'versions') fetchVersions();
+                    else if (index === 'reports') fetchReports();
+                };
+
+                const fetchDashboard = async () => {
+                    const res = await fetchWithAuth(`${API_BASE}/dashboard`);
+                    if (res.success) {
+                        stats.value = res.data;
+                        initGrowthChart();
+                    }
+                };
+
+                const fetchUsers = async () => {
+                    loading.value = true;
+                    const url = `${API_BASE}/users?page=${userPage.value}&search=${searchQuery.value}`;
+                    const res = await fetchWithAuth(url);
+                    if (res.success) {
+                        users.value = res.data.users;
+                        userTotal.value = res.data.total;
+                    }
+                    loading.value = false;
+                };
+
+                const handleUserPageChange = (page) => {
+                    userPage.value = page;
+                    fetchUsers();
+                };
+
+                const fetchOrders = async () => {
+                    loading.value = true;
+                    const res = await fetchWithAuth(`${API_BASE}/orders?page=${orderPage.value}`);
+                    if (res.success) {
+                        orders.value = res.data.orders;
+                        orderTotal.value = res.data.total;
+                    }
+                    loading.value = false;
+                };
+
+                const handleOrderPageChange = (page) => {
+                    orderPage.value = page;
+                    fetchOrders();
+                };
+
+                const fetchActivationCodes = async () => {
+                    loading.value = true;
+                    try {
+                        const res = await fetchWithAuth(`${API_BASE}/activation_codes?page=${activationPage.value}&search=${activationSearch.value}`);
+                        if (res.success) {
+                            activationCodes.value = res.data.codes;
+                            activationTotal.value = res.data.total;
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('获取激活码列表失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const handleActivationPageChange = (page) => {
+                    activationPage.value = page;
+                    fetchActivationCodes();
+                };
+
+                const handleGenerateCodes = async () => {
+                    loading.value = true;
+                    try {
+                        const res = await fetchWithAuth(`${API_BASE}/activation_codes`, {
+                            method: 'POST',
+                            body: JSON.stringify(activationForm)
+                        });
+                        if (res.success) {
+                            ElementPlus.ElMessage.success(res.message || '激活码生成成功');
+                            showActivationGen.value = false;
+                            fetchActivationCodes();
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('生成激活码失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const updateActivationStatus = async (codeId, status) => {
+                    try {
+                        const res = await fetchWithAuth(`${API_BASE}/activation_codes/${codeId}/status`, {
+                            method: 'PUT',
+                            body: JSON.stringify({ status })
+                        });
+                        if (res.success) {
+                            ElementPlus.ElMessage.success('状态更新成功');
+                            fetchActivationCodes();
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('更新状态失败');
+                    }
+                };
+
+                const fetchVersions = async () => {
+                    const res = await fetchWithAuth(`${API_BASE}/versions`);
+                    if (res.success) {
+                        versions.value = res.data;
+                        // 初始化表单
+                        versionForm.version = res.data.app_versions.latest.version;
+                        versionForm.build_number = res.data.app_versions.latest.build_number;
+                        versionForm.download_url = res.data.app_versions.latest.download_url;
+                        versionForm.force_update = res.data.app_versions.latest.force_update;
+                        versionForm.changelog_str = res.data.app_versions.latest.changelog.join('\n');
+                    }
+                };
+
+                const toggleUserStatus = async (user) => {
+                    const newStatus = user.status === 'active' ? 'disabled' : 'active';
+                    try {
+                        const res = await fetchWithAuth(`${API_BASE}/users/${user.id}/status`, {
+                            method: 'PUT',
+                            body: JSON.stringify({ status: newStatus })
+                        });
+                        if (res.success) {
+                            ElementPlus.ElMessage.success('操作成功');
+                            fetchUsers();
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('操作失败');
+                    }
+                };
+
+                const handleOrderAction = async (order, status) => {
+                    try {
+                        const res = await fetchWithAuth(`${API_BASE}/orders/${order.id}/status`, {
+                            method: 'PUT',
+                            body: JSON.stringify({ status })
+                        });
+                        if (res.success) {
+                            ElementPlus.ElMessage.success('订单处理成功');
+                            fetchOrders();
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('处理失败');
+                    }
+                };
+
+                const handleUpdateVersion = async () => {
+                    loading.value = true;
+                    try {
+                        const data = {
+                            ...versionForm,
+                            changelog: versionForm.changelog_str.split('\n').filter(s => s.trim()),
+                            release_date: new Date().toISOString().split('T')[0]
+                        };
+                        const res = await fetchWithAuth(`${API_BASE}/versions/app`, {
+                            method: 'POST',
+                            body: JSON.stringify(data)
+                        });
+                        if (res.success) {
+                            ElementPlus.ElMessage.success('版本发布成功');
+                            showVersionEdit.value = false;
+                            fetchVersions();
+                        }
+                    } catch (e) {
+                        ElementPlus.ElMessage.error('发布失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const fetchReports = async () => {
+                    const growthRes = await fetchWithAuth(`${API_BASE}/reports/user_growth`);
+                    const revenueRes = await fetchWithAuth(`${API_BASE}/reports/revenue`);
+                    
+                    if (growthRes.success && revenueRes.success) {
+                        initReportCharts(growthRes.data, revenueRes.data);
+                    }
+                };
+
+                const initGrowthChart = () => {
+                    nextTick(() => {
+                        const chartDom = document.getElementById('growthChart');
+                        if (!chartDom) return;
+                        const myChart = echarts.init(chartDom);
+                        const option = {
+                            title: { text: '系统活跃度概览' },
+                            tooltip: { trigger: 'axis' },
+                            xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] },
+                            yAxis: { type: 'value' },
+                            series: [{ data: [120, 200, 150, 80, 70, 110, 130], type: 'line', smooth: true }]
+                        };
+                        myChart.setOption(option);
+                    });
+                };
+
+                const initReportCharts = (growthData, revenueData) => {
+                    nextTick(() => {
+                        const growthDom = document.getElementById('userGrowthReport');
+                        const revenueDom = document.getElementById('revenueReport');
+                        
+                        if (growthDom) {
+                            const growthChart = echarts.init(growthDom);
+                            growthChart.setOption({
+                                title: { text: '用户增长趋势' },
+                                tooltip: { trigger: 'axis' },
+                                xAxis: { type: 'category', data: growthData.map(d => d.date) },
+                                yAxis: { type: 'value' },
+                                series: [{ data: growthData.map(d => d.count), type: 'bar', color: '#409EFF' }]
+                            });
+                        }
+                        
+                        if (revenueDom) {
+                            const revenueChart = echarts.init(revenueDom);
+                            revenueChart.setOption({
+                                title: { text: '营收统计' },
+                                tooltip: { trigger: 'axis' },
+                                xAxis: { type: 'category', data: revenueData.map(d => d.date) },
+                                yAxis: { type: 'value' },
+                                series: [{ data: revenueData.map(d => d.revenue), type: 'line', smooth: true, color: '#67C23A' }]
+                            });
+                        }
+                    });
+                };
+
+                onMounted(() => {
+                    if (isLoggedIn.value) fetchDashboard();
+                });
+
+                return {
+                    isLoggedIn, loading, activeMenu, menuTitle, loginForm, userInfo,
+                    stats, users, userTotal, userPage, searchQuery,
+                    orders, orderTotal, orderPage, versions, showVersionEdit, versionForm,
+                    activationCodes, activationTotal, activationPage, activationSearch, 
+                    showActivationGen, activationForm,
+                    handleLogin, handleLogout, handleUserCommand, handleMenuSelect,
+                    handleUserPageChange, handleOrderPageChange, handleActivationPageChange,
+                    fetchUsers, fetchActivationCodes,
+                    toggleUserStatus, handleOrderAction, handleUpdateVersion,
+                    handleGenerateCodes, updateActivationStatus
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+version: '3.8'
+
+# 完整 Docker Compose 配置，包含 Nginx 反向代理
+# 使用方式: docker-compose -f docker-compose.nginx.yml up -d
+
+services:
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: xuebadict-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Nginx 状态监控端口
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/ssl:ro  # SSL 证书目录
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - xuebadict-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/nginx_status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+
+  # MySQL 数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: xuebadict-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-123456}
+      MYSQL_DATABASE: ${DB_NAME:-xuebadict}
+      MYSQL_USER: ${DB_USER:-xuebadict}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-123456}
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./main.sql:/docker-entrypoint-initdb.d/01-main.sql
+      - ./add_new_tables.sql:/docker-entrypoint-initdb.d/02-add_new_tables.sql
+      - ./init_membership_data.sql:/docker-entrypoint-initdb.d/03-init_membership_data.sql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    restart: unless-stopped
+    networks:
+      - xuebadict-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存服务
+  redis:
+    image: redis:7-alpine
+    container_name: xuebadict-redis
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - xuebadict-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 狮子英语 API 服务
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xuebadict-api
+    environment:
+      FLASK_ENV: ${FLASK_ENV:-production}
+      SECRET_KEY: ${SECRET_KEY:-production-secret-key-change-this}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-production-jwt-secret-key}
+      
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-xuebadict}
+      DB_PASSWORD: ${DB_PASSWORD:-123456}
+      DB_NAME: ${DB_NAME:-xuebadict}
+      SQLALCHEMY_DATABASE_URI: mysql+pymysql://${DB_USER:-xuebadict}:${DB_PASSWORD:-123456}@mysql:3306/${DB_NAME:-xuebadict}?charset=utf8mb4
+      
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: 0
+      
+      MAX_CONTENT_LENGTH: 16777216
+      UPLOAD_FOLDER: /app/uploads
+      LOG_LEVEL: INFO
+      LOG_FILE: /app/logs/app.log
+      PAGINATION_PAGE_SIZE: 20
+      
+      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID:-}
+      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET:-}
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      ALIPAY_APP_ID: ${ALIPAY_APP_ID:-}
+      QWEN_API_KEY: ${QWEN_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    
+    expose:  # 仅在内部网络暴露，不在主机上暴露
+      - "5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./dict:/app/dict:ro
+      - ./instance:/app/instance
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - xuebadict-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Celery Worker 服务
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xuebadict-celery-worker
+    command: celery -A services.tasks worker -l info
+    environment:
+      FLASK_ENV: ${FLASK_ENV:-production}
+      SQLALCHEMY_DATABASE_URI: mysql+pymysql://${DB_USER:-xuebadict}:${DB_PASSWORD:-123456}@mysql:3306/${DB_NAME:-xuebadict}?charset=utf8mb4
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+    networks:
+      - xuebadict-network
+
+  # Flower 监控面板
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xuebadict-flower
+    command: celery -A services.tasks flower --port=5555
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    expose:
+      - "5555"
+    depends_on:
+      - redis
+      - celery_worker
+    restart: unless-stopped
+    networks:
+      - xuebadict-network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  xuebadict-network:
+    driver: bridge

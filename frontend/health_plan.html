@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>健康底座 · 计划表</title>
+<style>
+  :root{
+    --indigo:#5E5CE6; --green:#30B06A; --orange:#E8833A; --blue:#3A82E8;
+    --bg:#F5F6FA; --card:#FFFFFF; --line:#E8EAF0; --text:#1C1E26; --muted:#7A8092;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;
+    font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 64px}
+  h1{font-size:24px;margin:0 0 6px;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px 18px 16px;margin-bottom:14px}
+  .card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:7px}
+  .card h2 .tag{margin-left:auto;font-size:11px;font-weight:400;color:var(--muted)}
+  .lead{background:linear-gradient(135deg,#EAF6EE,#EEF0FF);border:none}
+  .lead p{margin:0 0 6px}
+  .lead p:last-child{margin:0}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  tbody tr:last-child td{border-bottom:none}
+  .lv{display:inline-block;padding:1px 7px;border-radius:99px;font-size:10.5px;font-weight:600}
+  .lv.a{background:rgba(48,176,106,.13);color:var(--green)}
+  .lv.b{background:rgba(232,131,58,.14);color:var(--orange)}
+  .lv.c{background:rgba(58,130,232,.13);color:var(--blue)}
+  .lv.x{background:rgba(94,92,230,.13);color:var(--indigo)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .kv{background:#FAFBFD;border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  .kv b{display:block;font-size:12px;margin-bottom:2px}
+  .kv span{font-size:11.5px;color:var(--muted);line-height:1.5}
+  ul{margin:0;padding-left:18px}
+  li{margin-bottom:5px}
+  .muted{color:var(--muted);font-size:12px}
+  /* 打卡区 */
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .bar select,.bar input[type=date]{font:inherit;font-size:13px;padding:5px 8px;
+    border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
+  .btn{font:inherit;font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer;
+    border:1px solid var(--line);background:#fff;color:var(--text)}
+  .btn.primary{background:var(--indigo);border-color:var(--indigo);color:#fff}
+  .btn.ghost{background:#fff}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .prog{height:6px;background:#EDF0F5;border-radius:99px;overflow:hidden;margin:10px 0 4px}
+  .prog i{display:block;height:100%;background:var(--green);width:0;transition:width .3s}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+  .chip{font-size:11.5px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);
+    background:#fff;color:var(--muted)}
+  .chip.on{background:rgba(48,176,106,.12);border-color:var(--green);color:var(--green);font-weight:600}
+  .habit{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .habit:last-child{border-bottom:none}
+  .ck{width:21px;height:21px;flex:0 0 21px;border-radius:50%;border:1.6px solid #D3D8E3;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:2px;
+    font-size:12px;color:#fff;background:#fff;user-select:none}
+  .ck.on{background:var(--green);border-color:var(--green)}
+  .hb{flex:1;min-width:0}
+  .hb .t{font-weight:600;font-size:13.5px}
+  .hb .m{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .hb .v{font-size:11.5px;margin-top:2px;color:var(--muted)}
+  .hb .v.on{color:var(--green);font-weight:600}
+  .step{display:flex;flex-direction:column;gap:3px;flex:0 0 auto}
+  .step button{width:26px;height:20px;font-size:12px;line-height:1;border-radius:6px;
+    border:1px solid var(--line);background:#FAFBFD;cursor:pointer;color:var(--muted);padding:0}
+  .step input{width:54px;font:inherit;font-size:12px;text-align:center;padding:2px 4px;
+    border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--text)}
+  .warn{background:#FFF7EC;border:1px solid #F3DDBE;border-radius:12px;padding:12px 14px;
+    font-size:12.5px;margin-bottom:14px}
+  .foot{font-size:11.5px;color:var(--muted);line-height:1.7}
+  .today{background:rgba(94,92,230,.07)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>健康底座 · 计划表</h1>
+  <div class="sub">健康不是工作的对立面，是认知产能的维护成本。靠脑力吃饭，睡够、动够、吃对，保护的就是你赚钱的那台发动机。</div>
+
+  <div class="card lead">
+    <p><b>先纠个偏：</b>网上流传的「柳叶刀 12 个延寿习惯」<b>没有对应原文</b>。它是柳叶刀痴呆委员会（2020 年 12 项、2024 年更新为 14 项）、eClinicalMedicine 2026 的 SPAN 研究、以及《中国居民膳食指南》被自媒体拼装后的产物，各版本条款互相矛盾（有的算午休，有的算多喝水，有的算定期体检）。</p>
+    <p>所以下面这份<b>不是照抄网传版本</b>，而是按<b>证据强度</b>重建的 12 条：A 级 5 条有研究给出的明确阈值，B 级 5 条靠测量或体检确认，C 级 2 条是委员会推荐但无单一活动证据——反而给了你自由度，你的「学习 + 看书」正好挂在第 11 条上。</p>
+  </div>
+
+  <div class="card">
+    <h2>出处对照 <span class="tag">真实源头只有两个</span></h2>
+    <table>
+      <thead><tr><th>来源</th><th>内容</th><th>现状</th></tr></thead>
+      <tbody>
+        <tr><td>柳叶刀痴呆委员会 2020</td><td>12 项可改变风险因素，覆盖约 40% 病例</td><td><b>2024 已更新为 14 项</b>（新增高 LDL 胆固醇 7%、未治疗视力受损 2%），覆盖 45%</td></tr>
+        <tr><td>eClinicalMedicine 2026（SPAN）</td><td>UK Biobank 59,078 人、随访 8.1 年，只讲「睡、动、吃」三件事</td><td><b>没有 12 条清单</b>，网传清单是二次拼装</td></tr>
+        <tr><td>《中国居民膳食指南》</td><td>膳食多样、吃动平衡等通用建议</td><td>被混入后冠以「柳叶刀」名义</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>12 条证据项 + 1 条执行项</h2>
+    <table>
+      <thead><tr><th style="width:26px">#</th><th>条目</th><th style="width:56px">等级</th><th>阈值</th><th style="width:46px">频率</th><th style="width:30%">出处</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><b>睡眠</b></td><td><span class="lv a">A</span></td><td>7.2–8.0 小时／天，固定作息</td><td>每天</td><td>SPAN 2026 最佳区间</td></tr>
+        <tr><td>2</td><td><b>中高强度运动</b></td><td><span class="lv a">A</span></td><td>&gt;42 分钟／天（微喘、心跳加快即可）</td><td>每天</td><td>SPAN 2026</td></tr>
+        <tr><td>3</td><td><b>膳食质量</b></td><td><span class="lv a">A</span></td><td>评分 57.5–72.5（10 项各 10 分，60–70 分达标）</td><td>每天</td><td>SPAN 2026</td></tr>
+        <tr><td>4</td><td><b>零吸烟</b></td><td><span class="lv a">A</span></td><td>0 支，含电子烟，避开二手烟</td><td>每天</td><td>委员会 2020/2024</td></tr>
+        <tr><td>5</td><td><b>限酒</b></td><td><span class="lv a">A</span></td><td>&lt;21 单位／周，最好不喝</td><td>每周</td><td>委员会（&gt;21 单位/周为风险因素）</td></tr>
+        <tr><td>6</td><td><b>血压</b></td><td><span class="lv b">B</span></td><td>收缩压 &lt;130 mmHg</td><td>每季</td><td>委员会 2020</td></tr>
+        <tr><td>7</td><td><b>LDL 胆固醇</b></td><td><span class="lv b">B</span></td><td>LDL-C &lt;3.4 mmol/L（高危人群更严，遵医嘱）</td><td>每季</td><td>委员会 2024 新增（约 7%）</td></tr>
+        <tr><td>8</td><td><b>视力</b></td><td><span class="lv b">B</span></td><td>受损及时矫正（含老花、白内障）</td><td>每季</td><td>委员会 2024 新增（约 2%）</td></tr>
+        <tr><td>9</td><td><b>听力</b></td><td><span class="lv b">B</span></td><td>受损及时干预（助听器）</td><td>每季</td><td>委员会（最大单项可改变因素）</td></tr>
+        <tr><td>10</td><td><b>体重与血糖</b></td><td><span class="lv b">B</span></td><td>BMI 18.5–24，腰围 &lt;90（男）/&lt;85（女），HbA1c &lt;5.7%</td><td>每月</td><td>委员会（肥胖、糖尿病）</td></tr>
+        <tr><td>11</td><td><b>持续认知活跃</b></td><td><span class="lv c">C</span></td><td>学习 45 分钟 + 纸质书 30 分钟（合计 ≥75 分钟）</td><td>每天</td><td>委员会推荐，无单一活动证据</td></tr>
+        <tr><td>12</td><td><b>线下社交 + 减压</b></td><td><span class="lv c">C</span></td><td>线下见面 ≥60 分钟／周（线上不算）</td><td>每周</td><td>委员会（社交隔离、抑郁）</td></tr>
+        <tr><td>—</td><td><b>每 50 分钟起身 3 分钟</b></td><td><span class="lv x">节奏</span></td><td>≥6 次／天</td><td>每天</td><td>执行项，硬约束，不是证据条目</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin:10px 0 0">C 级的委员会原话是「推荐保持认知、身体、社交活跃，但没有证据表明任何单一活动有保护作用」——所以形式自由，不必纠结学什么、看什么书。</p>
+  </div>
+
+  <div class="card">
+    <h2>每日时段表 <span class="tag">上午锁死给最难的活</span></h2>
+    <table>
+      <thead><tr><th style="width:110px">时间</th><th>内容</th><th style="width:64px">时长</th></tr></thead>
+      <tbody>
+        <tr><td>08:00–09:30</td><td><b>深度工作 Ⅰ</b> · 架构、核心编码、关键决策</td><td>90′</td></tr>
+        <tr><td>09:35–09:38</td><td>起身活动 3 分钟</td><td>3′</td></tr>
+        <tr><td>09:40–11:10</td><td><b>深度工作 Ⅱ</b> · 继续最难的活</td><td>90′</td></tr>
+        <tr><td>12:00–12:50</td><td>午餐 + 午休（断屏）</td><td>50′</td></tr>
+        <tr><td>14:00–15:30</td><td>协作 · 会议 · 交付</td><td>90′</td></tr>
+        <tr><td>15:35–15:38</td><td>起身活动 3 分钟</td><td>3′</td></tr>
+        <tr><td>15:40–17:10</td><td>协作 · 会议 · 交付</td><td>90′</td></tr>
+        <tr><td>18:00–18:42</td><td><b>中高强度运动 42 分钟</b>（微喘即可）</td><td>42′</td></tr>
+        <tr><td>19:30–20:15</td><td>学习 · 新技能／课程</td><td>45′</td></tr>
+        <tr><td>20:20–20:23</td><td>起身活动 3 分钟</td><td>3′</td></tr>
+        <tr><td>20:30–21:00</td><td>纸质书阅读（替代刷手机，同时护眼助眠）</td><td>30′</td></tr>
+        <tr><td>21:30–21:45</td><td>收尾 · 明日三件事</td><td>15′</td></tr>
+        <tr><td>22:30–22:45</td><td>断屏 · 准备入睡（<b>23:00 熄灯</b>）</td><td>15′</td></tr>
+      </tbody>
+    </table>
+    <p class="muted" style="margin:10px 0 0">一天中最贵的时间只给最难的活；下午放协作、会议、交付；每 50 分钟起身 3 分钟是硬约束，不是建议。</p>
+  </div>
+
+  <div class="card">
+    <h2>每周节奏</h2>
+    <div class="grid">
+      <div class="kv"><b>周一 · 锁定 3 个可交付成果</b><span>要的是「可交付成果」，不是任务清单。三个必须是这周能交出去的东西。</span></div>
+      <div class="kv"><b>周二 · 力量训练</b><span>三大项或自重循环 45 分钟。力量是老年期独立生活的保险。</span></div>
+      <div class="kv"><b>周三 · 线下社交 ≥1 小时</b><span>线上不算。面对面，最好带点身体活动。</span></div>
+      <div class="kv"><b>周四 · 力量训练</b><span>与周二不同部位，留出恢复时间。</span></div>
+      <div class="kv"><b>周五 · 三栏复盘</b><span>交付了什么 / 钱进来了吗 / 健康达标率。缺一栏就是在自欺。</span></div>
+      <div class="kv"><b>周六 · 力量训练</b><span>一周三次力量，是 12 条里时间成本最低的一条。</span></div>
+      <div class="kv"><b>周日 · 备餐 90 分钟</b><span>一次性备好一周的蛋白、主食和切好的蔬菜，换整周膳食达标。</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>每月 / 每季</h2>
+    <table>
+      <thead><tr><th style="width:60px">周期</th><th>动作</th><th style="width:52px">时长</th></tr></thead>
+      <tbody>
+        <tr><td>每月</td><td><b>财务结算 + 产能审计</b>——产能审计看的是<b>深度工作小时数</b>，不是坐了几小时。这两条放一起，是因为它们决定同一件事：你卖的时间值不值。</td><td>60′</td></tr>
+        <tr><td>每月</td><td><b>至少一件有复利的增长动作</b>——能沉淀、能复用、下次不用从头做的东西。一件都没有，这个月就是纯重复。</td><td>120′</td></tr>
+        <tr><td>每月</td><td><b>身体数据采集</b>——体重、腰围、静息心率。静息心率是恢复能力最便宜的指标。</td><td>15′</td></tr>
+        <tr><td>每月</td><td><b>读完 1–2 本书并输出笔记</b>——不输出等于没读。笔记可以是一页，但要有你自己的判断。</td><td>—</td></tr>
+        <tr><td>每季</td><td><b>体检兜底</b>——血压、血脂四项（重点看 LDL）、HbA1c、视力、听力。感觉良好不能替代数值。</td><td>120′</td></tr>
+        <tr><td>每季</td><td><b>收入结构审计</b>——本月收入里，多少是「卖时间」，多少是「可复用资产」。可复用那一栏一件都没有，就是纯打工，哪怕是高薪打工。</td><td>90′</td></tr>
+        <tr><td>每季</td><td><b>完成 1 个能放进作品集的东西</b>——能被别人看到、完整、说清楚你解决了什么问题。</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="warn">
+    <b>三条关键约束</b>
+    <ul style="margin:6px 0 0">
+      <li><b>别一次上 12 条。</b>分 4 周递进：第 1–2 周只做「固定睡眠 + 每 50 分钟起身 + 每天蔬菜 300g」，连续 10 天达标再进下一阶段。</li>
+      <li><b>崩盘兜底用 SPAN 的最小剂量</b>：多睡 5 分钟 + 多动 1.9 分钟 + 多半份蔬菜 → 约 +1 年预期寿命。忙到炸的一天，只做这三件也不算断。</li>
+      <li><b>9.35 年是观察性研究的组间差值（95% CI 6.67–11.63），不是因果</b>，受试者中位年龄 64 岁，外推到你身上要打折看。体检数值是唯一不能靠「感觉良好」替代的东西。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>4 周落地顺序</h2>
+    <table>
+      <thead><tr><th style="width:130px">阶段</th><th>本阶段只做这些</th><th style="width:150px">解锁条件</th></tr></thead>
+      <tbody>
+        <tr><td><b>第 1–2 周 · 打底</b></td><td>固定睡眠 + 每 50 分钟起身 + 蔬菜 300g</td><td>连续 10 天达标</td></tr>
+        <tr><td><b>第 3 周 · 动起来</b></td><td>＋ 中高强度运动 ≥42 分钟／天</td><td>连续 7 天达标</td></tr>
+        <tr><td><b>第 4 周 · 认知产能</b></td><td>＋ 学习 45 分钟 + 纸质书 30 分钟</td><td>连续 7 天达标</td></tr>
+        <tr><td><b>第 5 周起 · 全量</b></td><td>12 条证据项全量打卡，测量项按周期核对</td><td>长期保持</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ 打卡 ============ -->
+  <div class="card">
+    <h2>12 项打卡 <span class="tag">数据存本机浏览器，刷新不丢</span></h2>
+
+    <div class="bar">
+      <input type="date" id="day">
+      <button class="btn ghost" id="prev">‹ 前一天</button>
+      <button class="btn ghost" id="next">后一天 ›</button>
+      <button class="btn ghost" id="today">今天</button>
+      <select id="phaseSel"></select>
+      <span class="muted" id="streakTxt"></span>
+    </div>
+
+    <div id="phaseBox">
+      <div style="font-weight:600;font-size:13.5px" id="phaseTitle"></div>
+      <div class="muted" id="phaseFocus" style="margin-top:2px"></div>
+      <div class="prog"><i id="phaseBar"></i></div>
+      <div class="muted" id="phaseHint"></div>
+      <div class="chips" id="chips"></div>
+      <div style="margin-top:10px"><button class="btn primary" id="advance" disabled>解锁下一阶段</button></div>
+    </div>
+
+    <div style="margin-top:16px" id="habits"></div>
+    <div class="muted" style="margin-top:10px" id="missing"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="showAll">展开其余条目（不在当前阶段，可提前记录）</button>
+      <button class="btn ghost" id="reset">清空本日记录</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>崩盘兜底 · 最小剂量 <span class="tag">约 +1 年预期寿命</span></h2>
+    <ul>
+      <li><b>多睡 5 分钟</b>——今晚比昨天早躺 5 分钟，别小看，剂量效应是连续的。</li>
+      <li><b>多动 1.9 分钟</b>——爬两层楼、快走一段，微喘即可。</li>
+      <li><b>多半份蔬菜</b>——任何一餐加半份蔬菜，约 40g。</li>
+    </ul>
+    <p class="muted" style="margin:8px 0 0">忙到炸的一天，只做这三件也不算断。9.35 年是观察性研究的组间差值（95% CI 6.67–11.63），不是因果；受试者中位年龄 64 岁，外推需打折。</p>
+  </div>
+
+  <div class="foot">
+    打卡数据保存在本机浏览器 localStorage（键名 <code>timeplan.health.v1</code>），不上传、不同步。换浏览器或清缓存会丢，重要数据请自行导出。<br>
+    本表是生活管理工具，不构成医疗建议。用药、降脂目标、血压目标请遵医嘱。
+  </div>
+</div>
+
+<script>
+const KEY='timeplan.health.v1';
+const H=[
+ {id:'sleep',no:1,title:'睡眠',level:'a',cad:'daily',kind:'hours',min:7.2,max:8.0,step:.5,suffix:'小时',target:'7.2–8.0 小时／天，固定作息',src:'SPAN 2026'},
+ {id:'exercise',no:2,title:'中高强度运动',level:'a',cad:'daily',kind:'minutes',min:42,step:5,suffix:'分钟',target:'≥42 分钟／天，微喘、心跳加快即可',src:'SPAN 2026'},
+ {id:'diet',no:3,title:'膳食质量',level:'a',cad:'daily',kind:'score',min:57.5,max:72.5,step:10,suffix:'分',target:'10 项各 10 分，60–70 分达标',src:'SPAN 2026'},
+ {id:'nosmoke',no:4,title:'零吸烟',level:'a',cad:'daily',kind:'bool',target:'0 支，含电子烟，避开二手烟',src:'委员会 2020/2024'},
+ {id:'alcohol',no:5,title:'限酒',level:'a',cad:'weekly',kind:'count',max:21,excl:true,step:1,suffix:'单位',target:'<21 单位／周，最好不喝',src:'委员会'},
+ {id:'bp',no:6,title:'血压',level:'b',cad:'quarterly',kind:'number',max:130,excl:true,step:1,suffix:'mmHg',target:'收缩压 <130 mmHg',src:'委员会 2020'},
+ {id:'ldl',no:7,title:'LDL 胆固醇',level:'b',cad:'quarterly',kind:'number',max:3.4,excl:true,step:.1,suffix:'mmol/L',target:'LDL-C <3.4 mmol/L（遵医嘱）',src:'委员会 2024 新增'},
+ {id:'vision',no:8,title:'视力',level:'b',cad:'quarterly',kind:'bool',target:'本季已检查，受损已矫正',src:'委员会 2024 新增'},
+ {id:'hearing',no:9,title:'听力',level:'b',cad:'quarterly',kind:'bool',target:'本季已检查，受损已配助听器',src:'委员会'},
+ {id:'metabolic',no:10,title:'体重与血糖',level:'b',cad:'monthly',kind:'number',min:18.5,max:24,step:.1,suffix:'BMI',target:'BMI 18.5–24，腰围、HbA1c 达标',src:'委员会'},
+ {id:'cognition',no:11,title:'持续认知活跃',level:'c',cad:'daily',kind:'minutes',min:75,step:5,suffix:'分钟',target:'学习 45 + 纸质书 30 分钟',src:'委员会推荐'},
+ {id:'social',no:12,title:'线下社交 + 减压',level:'c',cad:'weekly',kind:'minutes',min:60,step:5,suffix:'分钟',target:'线下见面 ≥60 分钟／周',src:'委员会'},
+ {id:'break',no:0,title:'每 50 分钟起身 3 分钟',level:'x',cad:'daily',kind:'count',min:6,step:1,suffix:'次',target:'≥6 次／天',src:'执行项 · 硬约束'}
+];
+const PH=[
+ {t:'第 1–2 周 · 打底',f:'固定睡眠 + 每 50 分钟起身 + 蔬菜 300g',ids:['sleep','break','diet'],d:10},
+ {t:'第 3 周 · 动起来',f:'加入中高强度运动 ≥42 分钟／天',ids:['sleep','break','diet','exercise'],d:7},
+ {t:'第 4 周 · 认知产能',f:'加入学习 45 分钟 + 纸质书 30 分钟',ids:['sleep','break','diet','exercise','cognition'],d:7},
+ {t:'第 5 周起 · 全量',f:'12 条证据项全量打卡，测量项按周期核对',ids:H.map(h=>h.id),d:0}
+];
+const byId=id=>H.find(h=>h.id===id);
+const pad=n=>String(n).padStart(2,'0');
+const dk=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseD=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const addD=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+
+let S={logs:{},phase:0};
+try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);S.logs=p.logs||{};S.phase=p.phase||0;}}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+
+let cur=dk(new Date()), showAll=false;
+
+function pass(h){
+  if(h.kind==='bool')return 1;
+  let raw = (h.min!=null&&h.max!=null)?(h.min+h.max)/2 : (h.min!=null?h.min : (h.max!=null?(h.excl?h.max-h.step:h.max):1));
+  let v = Math.round(raw/h.step)*h.step;
+  if(h.min!=null&&v<h.min) v=Math.ceil(h.min/h.step)*h.step;
+  if(h.max!=null){ if(h.excl&&v>=h.max) v=h.max-h.step; else if(!h.excl&&v>h.max) v=h.max; }
+  return Math.round(v*10)/10;
+}
+function met(h,v){ if(h.kind==='bool')return v>=1; if(h.min!=null&&v<h.min)return false;
+  if(h.max!=null)return h.excl? v<h.max : v<=h.max; return true; }
+
+function agg(h,day){
+  const d=parseD(day);
+  if(h.cad==='daily')return (S.logs[day]||{})[h.id]||0;
+  if(h.cad==='weekly'){
+    const wd=(d.getDay()+6)%7, mon=addD(d,-wd);
+    let s=0; for(let i=0;i<7;i++) s+=(S.logs[dk(addD(mon,i))]||{})[h.id]||0; return s;
+  }
+  const pre = h.cad==='monthly' ? day.slice(0,7)
+            : `${d.getFullYear()}-Q${Math.floor(d.getMonth()/3)+1}`;
+  let last=0;
+  Object.keys(S.logs).filter(k=> h.cad==='monthly'? k.startsWith(pre) : (k.slice(0,4)===String(d.getFullYear()) && Math.floor((+k.slice(5,7)-1)/3)===Math.floor(d.getMonth()/3)))
+    .sort().forEach(k=>{const v=S.logs[k][h.id]; if(v!=null) last=v;});
+  return last;
+}
+function fmt(h,v){
+  if(h.kind==='bool')return v>=1?'已达标':'未记录';
+  if(h.kind==='hours')return v.toFixed(1)+' 小时';
+  if(h.kind==='score')return v.toFixed(0)+' 分';
+  if(h.kind==='count')return v.toFixed(0)+' '+h.suffix;
+  if(h.kind==='minutes')return v.toFixed(0)+' 分钟';
+  return v.toFixed(h.step<1?1:0)+(h.suffix?' '+h.suffix:'');
+}
+const perTxt={daily:'',weekly:'本周累计 ',monthly:'本月记录 ',quarterly:'本季记录 '};
+
+function setV(id,v){
+  const d=S.logs[cur]||{}; d[id]=Math.max(0,Math.round(v*10)/10); S.logs[cur]=d; save(); render();
+}
+function delV(id){ const d=S.logs[cur]; if(!d)return; delete d[id];
+  if(!Object.keys(d).length) delete S.logs[cur]; save(); render(); }
+
+function dayStatus(day,ids){
+  let total=0,m=0,dt=0,dm=0,miss=[];
+  ids.forEach(id=>{const h=byId(id),v=agg(h,day),ok=met(h,v);
+    total++; if(ok)m++; else miss.push(h.title);
+    if(h.cad==='daily'){dt++; if(ok)dm++;}});
+  return{total,m,dt,dm,miss};
+}
+function streak(ids){
+  let d=parseD(cur), n=0;
+  const st=dayStatus(dk(d),ids);
+  if(!(st.dt>0&&st.dm===st.dt)) d=addD(d,-1);
+  while(true){ const s=dayStatus(dk(d),ids); if(!(s.dt>0&&s.dm===s.dt))break; n++; d=addD(d,-1); if(n>400)break; }
+  return n;
+}
+
+function render(){
+  document.getElementById('day').value=cur;
+  const ph=PH[S.phase], st=dayStatus(cur,ph.ids), sk=streak(ph.ids);
+
+  document.getElementById('phaseSel').value=String(S.phase);
+  document.getElementById('phaseTitle').textContent=`健康底座 · ${ph.t}`;
+  document.getElementById('phaseFocus').textContent=ph.f;
+  document.getElementById('streakTxt').textContent=`连续 ${sk} 天 · 今日 ${st.m}/${st.total}`;
+  const prog = ph.d===0?1:Math.min(1,sk/ph.d);
+  document.getElementById('phaseBar').style.width=(prog*100)+'%';
+  document.getElementById('phaseHint').textContent =
+    ph.d===0?'已是最终阶段，长期保持':`${ph.t}：连续 ${ph.d} 天达标 → 解锁下一阶段（当前 ${sk} 天）`;
+  const adv=document.getElementById('advance');
+  adv.disabled = !(ph.d>0 && sk>=ph.d && S.phase<3);
+
+  document.getElementById('chips').innerHTML = ph.ids.map(id=>{
+    const h=byId(id), v=agg(h,cur), ok=met(h,v);
+    const name = h.no>0 ? `${h.no}·${h.title}` : '起身';
+    return `<span class="chip ${ok?'on':''}">${ok?'✓ ':'○ '}${name}</span>`;
+  }).join('');
+
+  const active=ph.ids, rest=H.filter(h=>!active.includes(h.id));
+  const list = showAll ? active.map(byId).concat(rest) : active.map(byId);
+  document.getElementById('habits').innerHTML = list.map(h=>{
+    const v=agg(h,cur), ok=met(h,v), locked=!active.includes(h.id);
+    const lvTxt={a:'A',b:'B',c:'C',x:'节奏'}[h.level];
+    const cadTxt={daily:'每天',weekly:'每周',monthly:'每月',quarterly:'每季'}[h.cad];
+    return `<div class="habit"${locked?' style="opacity:.55"':''}>
+      <div class="ck ${ok?'on':''}" data-ck="${h.id}">${ok?'✓':''}</div>
+      <div class="hb">
+        <div class="t">${h.no>0?h.no+'. ':' '}${h.title}
+          <span class="lv ${h.level}">${lvTxt}</span> <span class="muted">${cadTxt}</span></div>
+        <div class="m">${h.target} · ${h.src}</div>
+        <div class="v ${ok?'on':''}">${perTxt[h.cad]}${fmt(h,v)}</div>
+      </div>
+      ${h.kind==='bool'?'':`<div class="step">
+        <button data-p="${h.id}">+</button>
+        <input type="number" step="${h.step}" value="${v}" data-i="${h.id}">
+        <button data-m="${h.id}">−</button>
+      </div>`}
+    </div>`;
+  }).join('');
+
+  document.getElementById('missing').textContent =
+    st.miss.length? '待补：'+st.miss.join('、') : (st.total? '今日全部达标。' : '');
+
+  document.querySelectorAll('[data-ck]').forEach(e=>e.onclick=()=>{
+    const h=byId(e.dataset.ck); const ok=met(h,agg(h,cur));
+    ok? delV(h.id) : setV(h.id, pass(h));
+  });
+  document.querySelectorAll('[data-p]').forEach(e=>e.onclick=()=>{const h=byId(e.dataset.p);setV(h.id,agg(h,cur)+h.step)});
+  document.querySelectorAll('[data-m]').forEach(e=>e.onclick=()=>{const h=byId(e.dataset.m);setV(h.id,agg(h,cur)-h.step)});
+  document.querySelectorAll('[data-i]').forEach(e=>e.onchange=()=>{
+    const v=parseFloat(e.value); if(!isNaN(v))setV(e.dataset.i,v); else render();});
+}
+
+document.getElementById('phaseSel').innerHTML = PH.map((p,i)=>`<option value="${i}">${p.t}</option>`).join('');
+document.getElementById('phaseSel').onchange=e=>{S.phase=+e.target.value;save();render()};
+document.getElementById('advance').onclick=()=>{S.phase=Math.min(3,S.phase+1);save();render()};
+document.getElementById('day').onchange=e=>{cur=e.target.value;render()};
+document.getElementById('prev').onclick=()=>{cur=dk(addD(parseD(cur),-1));render()};
+document.getElementById('next').onclick=()=>{cur=dk(addD(parseD(cur),1));render()};
+document.getElementById('today').onclick=()=>{cur=dk(new Date());render()};
+document.getElementById('showAll').onclick=e=>{showAll=!showAll;e.target.textContent=showAll?'收起其余条目':'展开其余条目（不在当前阶段，可提前记录）';render()};
+document.getElementById('reset').onclick=()=>{if(confirm('清空 '+cur+' 的全部打卡记录？')){delete S.logs[cur];save();render()}};
+render();
+</script>
+</body>
+</html>

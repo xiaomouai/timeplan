@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLLs
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Secrets & local config
+.env
+.env.*
+!.env.example
+
+# Local data & runtime
+instance/
+logs/
+uploads/
+*.log
+server.log
+token.txt
+
+# OS
+.DS_Store
